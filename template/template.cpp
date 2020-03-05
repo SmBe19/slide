@@ -8,6 +8,7 @@
 
 void solve() {
   //!slide input
+
 }
 
 int main() {

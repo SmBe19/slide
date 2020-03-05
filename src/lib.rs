@@ -5,6 +5,7 @@ use std::env;
 use std::fs;
 
 mod generator;
+mod errors;
 
 pub fn run(args: ArgMatches) -> Result<(), Box<dyn Error>> {
     let input_file = match args.value_of("INPUT") {
@@ -13,9 +14,11 @@ pub fn run(args: ArgMatches) -> Result<(), Box<dyn Error>> {
     };
     let input_file = shellexpand::tilde(input_file);
     let input_file = Path::new(input_file.as_ref());
+
     let template_path = env::var("SLIDE_TEMPLATE_PATH").unwrap_or(String::from("~/.local/share/slide/template/"));
     let template_path = shellexpand::tilde(&template_path);
     let template_path = Path::new(template_path.as_ref());
+
     match args.subcommand() {
         ("init", Some(sub_args)) => cmd_init(input_file, template_path, sub_args),
         ("gen", Some(sub_args)) => cmd_gen(input_file, template_path, sub_args),
@@ -72,6 +75,6 @@ pub fn cmd_init(path: &Path, template_path: &Path, sub_args: &ArgMatches) -> Res
     generator::generate(path, template_path)
 }
 
-pub fn cmd_gen(path: &Path, template_path: &Path, sub_args: &ArgMatches) -> Result<(), Box<dyn Error>> {
+pub fn cmd_gen(path: &Path, template_path: &Path, _sub_args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     generator::generate(path, template_path)
 }

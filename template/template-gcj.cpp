@@ -8,6 +8,7 @@
 
 void solve(lli tcn) {
   //!slide input
+
   cout << "Case #" << tcn << ": ";
 }
 
