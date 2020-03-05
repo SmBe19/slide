@@ -1,3 +1,10 @@
+use slide::{parse_arguments, run};
+use std::process;
+
 fn main() {
-    println!("Hello, world!");
+    let args = parse_arguments();
+    if let Err(e) = run(args) {
+        eprintln!("Error: {}", e);
+        process::exit(1);
+    }
 }
