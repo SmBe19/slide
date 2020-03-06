@@ -100,7 +100,7 @@ fn handle_struct(line_tr: &str, structs: &mut String, defined_structs: &mut Hash
     while let Some(typ) = get_type(&mut chars, &defined_structs) {
         types.push(typ);
     }
-    let mut parts = line_tr.split('_');
+    let mut parts = line_tr.split(':');
     parts.next();
     let long = match parts.next() {
         Some(p) => p.to_string(),
@@ -119,7 +119,7 @@ fn handle_struct(line_tr: &str, structs: &mut String, defined_structs: &mut Hash
     Ok(())
 }
 
-fn read_variable(typ: InpType, variable: &str, input: &mut String, indent: &String, parts: &mut std::str::Split<&str>, counter: &mut String) {
+fn read_variable(typ: InpType, variable: &str, input: &mut String, indent: &String, parts: &mut std::str::Split<char>, counter: &mut String) {
     add_line_indented(input, indent, &format!("{} {};", typ, variable));
     match typ {
         InpType::Integer | InpType::Float | InpType::String => {
@@ -154,7 +154,7 @@ fn read_variable(typ: InpType, variable: &str, input: &mut String, indent: &Stri
 
 fn handle_variable(line_tr: &str, input: &mut String, defined_structs: &HashMap<char, InpStruct>) -> Result<(), ConfigError> {
     for inp_config in line_tr.split_ascii_whitespace() {
-        let mut parts = inp_config.split("_");
+        let mut parts = inp_config.split(':');
         let typ_part = match parts.next() {
             Some(s) => s,
             None => return Err(ConfigError),
