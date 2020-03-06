@@ -5,14 +5,14 @@
 //!slide include common
 
 //!slide struct
-//!slide endstruct
+//!slide end_struct
 
 //!slide plugin
-//!slide endplugin
+//!slide end_plugin
 
 void solve() {
   //!slide input
-  //!slide endinput
+  //!slide end_input
 
 }
 

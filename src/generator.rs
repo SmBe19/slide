@@ -95,15 +95,92 @@ fn handle_struct(line_tr: &str, structs: &mut String, defined_structs: &mut Hash
 
 fn handle_plugin(line_tr: &str, template_path: &Path, plugins: &mut String, input: &mut String) -> Result<(), Box<dyn Error>> {
     let mut parts = line_tr.split_ascii_whitespace();
+
     let include_path = &parts.next().ok_or(ConfigError)?[1..];
     let included = get_include_content(template_path, include_path)?;
-    let mut current_dest = plugins;
-    for line in included.lines() {
+
+    let mut options = HashMap::new();
+    options.insert("input", "true");
+
+    let mut lines = included.lines();
+    'config_loop: while let Some(line) = lines.next() {
         let line_tr = line.trim();
-        if line_tr == "//!slide plugin_input" {
-            current_dest = input;
+        if line_tr.starts_with("/*!slide plugin_config") {
+            while let Some(line) = lines.next() {
+                let line_tr = line.trim();
+                if line_tr == "*/" {
+                    break 'config_loop;
+                }
+                if line_tr.is_empty() {
+                    continue;
+                }
+                let parts: Vec<&str> = line_tr.split_ascii_whitespace().collect();
+                if parts.len() != 2 {
+                    return Err(ConfigError.into());
+                }
+                options.insert(parts[0], parts[1]);
+            }
+        }
+    }
+
+    for part in parts {
+        let part_tr = part.trim();
+        if part_tr.starts_with("-") {
+            options.insert(&part_tr[1..], "false");
+        } else if part_tr.starts_with("+") {
+            options.insert(&part_tr[1..], "true");
         } else {
-            add_line(current_dest, line);
+            let parts: Vec<&str> = part.split("=").collect();
+            if parts.len() != 2 {
+                return Err(ConfigError.into());
+            }
+            options.insert(parts[0], parts[1]);
+        }
+    }
+
+    let mut current_dest = plugins;
+    let mut lines = included.lines();
+    while let Some(line) = lines.next() {
+        let line_tr = line.trim();
+        if line_tr.starts_with("/*!slide plugin_config") {
+            while let Some(line) = lines.next() {
+                let line_tr = line.trim();
+                if line_tr == "*/" {
+                    break;
+                }
+            }
+        } else if line_tr.starts_with("//!slide") {
+            let mut parts = line_tr.split_ascii_whitespace();
+            parts.next();
+            match parts.next() {
+                Some("plugin_input") => {
+                    if options.get("input").ok_or(ConfigError)? == &"true" {
+                        current_dest = input;
+                    } else {
+                        break;
+                    }
+                },
+                Some("plugin_if") => {
+                    let variable = parts.next().ok_or(ConfigError)?;
+                    let should_skip = if variable.starts_with("!") {
+                        options.get(&variable[1..]).ok_or(ConfigError)? != &"false"
+                    } else {
+                        options.get(variable).ok_or(ConfigError)? != &"true"
+                    };
+                    if should_skip {
+                        skip_to_count(&mut lines,  Some("plugin_if"), "plugin_end_if")?;
+                    }
+                },
+                Some("plugin_end_if") => (),
+                Some(_) => return Err(ConfigError.into()),
+                None => return Err(ConfigError.into()),
+            }
+        } else {
+            let mut new_line = String::from(line);
+            for (k, v) in options.iter() {
+                new_line = new_line.replace(&format!("${}$", k), v);
+            }
+            add_line(current_dest, &new_line);
         }
     }
 
@@ -191,7 +268,8 @@ fn add_line_indented(res: &mut String, indent: &str, line: &str) {
     add_line(res, &format!("{}{}", indent, line));
 }
 
-fn skip_to<'a>(iter: &'a mut Lines, end: &str) -> Result<&'a str, InvalidCommandError> {
+fn skip_to_count<'a>(iter: &'a mut Lines, start: Option<&str>, end: &str) -> Result<&'a str, InvalidCommandError> {
+    let mut counter = 1;
     while let Some(line) = iter.next() {
         let line_tr = line.trim();
         if line_tr.starts_with("//!slide") {
@@ -199,12 +277,21 @@ fn skip_to<'a>(iter: &'a mut Lines, end: &str) -> Result<&'a str, InvalidCommand
             parts.next();
             if let Some(cmd) = parts.next() {
                 if cmd == end {
-                    return Ok(line)
+                    counter -= 1;
+                    if counter == 0 {
+                        return Ok(line)
+                    }
+                } else if Some(cmd) == start {
+                    counter += 1;
                 }
             }
         }
     }
     Err(InvalidCommandError::new(&format!("Missing end for {}", end)))
+}
+
+fn skip_to<'a>(iter: &'a mut Lines, end: &str) -> Result<&'a str, InvalidCommandError> {
+    skip_to_count(iter, None, end)
 }
 
 fn handle_config(template_path: &Path, lines: &mut Lines, res: &mut String, structs: &mut String, plugins: &mut String, input: &mut String) -> Result<(), Box<dyn Error>> {
@@ -246,12 +333,12 @@ fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &
         Some("struct") => {
             add_line(res, line);
             res.push_str(&structs);
-            add_line(res, skip_to(lines, "endstruct")?);
+            add_line(res, skip_to(lines, "end_struct")?);
         },
         Some("plugin") => {
             add_line(res, line);
             res.push_str(&plugins);
-            add_line(res, skip_to(lines, "endplugin")?);
+            add_line(res, skip_to(lines, "end_plugin")?);
         },
         Some("input") => {
             add_line(res, line);
@@ -259,15 +346,18 @@ fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &
             for line in input.lines() {
                 add_line_indented(res, &indent, line);
             }
-            add_line(res, skip_to(lines, "endinput")?);
-        },
-        Some("plugin_input") => {
-            add_line(res, line);
+            add_line(res, skip_to(lines, "end_input")?);
         },
         other => {
-            return match other {
-                Some(value) => error(value),
-                None => error("No command given"),
+            match other {
+                Some(value) => {
+                    if value.starts_with("plugin_") {
+                        add_line(res, line);
+                    } else {
+                        return error(value);
+                    }
+                },
+                None => return error("No command given"),
             };
         }
     }

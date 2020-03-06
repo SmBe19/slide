@@ -25,6 +25,3 @@ vv:vvvpii:n:m:n
 
 ## Install
 Run `./install.sh`. This will copy the binary to `~/.local/bin/` and the templates to `~/.local/share/slide/`. There you can adjust your custom templates.
-
-## TODO
- - parameters for includes
