@@ -7,9 +7,9 @@ use crate::errors::{ConfigError, InvalidCommandError};
 use std::str::{Lines, Chars};
 use std::fmt;
 
-fn get_include_content(template_path: &Path, include: &str) -> std::io::Result<String> {
+fn get_include_content(template_path: &Path, include: &str) -> Result<String, Box<dyn Error>> {
     let path = template_path.join("include").join(format!("{}.cpp", include));
-    fs::read_to_string(path)
+    transform(&fs::read_to_string(path)?, template_path)
 }
 
 #[derive(Debug, Clone)]
@@ -93,6 +93,23 @@ fn handle_struct(line_tr: &str, structs: &mut String, defined_structs: &mut Hash
     Ok(())
 }
 
+fn handle_plugin(line_tr: &str, template_path: &Path, plugins: &mut String, input: &mut String) -> Result<(), Box<dyn Error>> {
+    let mut parts = line_tr.split_ascii_whitespace();
+    let include_path = &parts.next().ok_or(ConfigError)?[1..];
+    let included = get_include_content(template_path, include_path)?;
+    let mut current_dest = plugins;
+    for line in included.lines() {
+        let line_tr = line.trim();
+        if line_tr == "//!slide plugin_input" {
+            current_dest = input;
+        } else {
+            add_line(current_dest, line);
+        }
+    }
+
+    Ok(())
+}
+
 fn read_variable(typ: InpType, variable: &str, input: &mut String, indent: &String, parts: &mut std::str::Split<char>, counter: &mut String) {
     add_line_indented(input, indent, &format!("{} {};", typ, variable));
     match typ {
@@ -138,12 +155,14 @@ fn handle_variable(line_tr: &str, input: &mut String, defined_structs: &HashMap<
     Ok(())
 }
 
-fn generate_input(config: &str, structs: &mut String, input: &mut String) -> Result<(), ConfigError> {
+fn generate_input(template_path: &Path, config: &str, structs: &mut String, plugins: &mut String, input: &mut String) -> Result<(), Box<dyn Error>> {
     let mut defined_structs = HashMap::new();
     for line in config.lines() {
         let line_tr = line.trim();
         if line_tr.starts_with('}') {
             handle_struct(line_tr, structs, &mut defined_structs)?;
+        } else if line_tr.starts_with('+') {
+            handle_plugin(line_tr, template_path, plugins, input)?;
         } else {
             handle_variable(line_tr, input, &defined_structs)?;
         }
@@ -188,13 +207,13 @@ fn skip_to<'a>(iter: &'a mut Lines, end: &str) -> Result<&'a str, InvalidCommand
     Err(InvalidCommandError::new(&format!("Missing end for {}", end)))
 }
 
-fn handle_config(lines: &mut Lines, res: &mut String, structs: &mut String, input: &mut String) -> Result<(), ConfigError> {
+fn handle_config(template_path: &Path, lines: &mut Lines, res: &mut String, structs: &mut String, plugins: &mut String, input: &mut String) -> Result<(), Box<dyn Error>> {
     let mut config = String::new();
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
         add_line(res, line);
         if line_tr == "*/" {
-            generate_input(&config, structs, input)?;
+            generate_input(template_path, &config, structs, plugins, input)?;
             break
         }
         add_line(&mut config, line);
@@ -202,7 +221,7 @@ fn handle_config(lines: &mut Lines, res: &mut String, structs: &mut String, inpu
     Ok(())
 }
 
-fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &mut String, structs: &mut String, input: &mut String) -> Result<(), Box<dyn Error>> {
+fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &mut String, structs: &mut String, plugins: &mut String, input: &mut String) -> Result<(), Box<dyn Error>> {
 
     let error = |msg| {
         Err(InvalidCommandError::new(msg).into())
@@ -216,7 +235,6 @@ fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &
                 let indent = get_indentation(line);
                 add_line_indented(res, &indent, &format!("// start include from {}", include_path));
                 let included = get_include_content(template_path, include_path)?;
-                let included = transform(&included, template_path)?;
                 for inc_line in included.lines() {
                     add_line_indented(res, &indent, inc_line);
                 }
@@ -230,6 +248,11 @@ fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &
             res.push_str(&structs);
             add_line(res, skip_to(lines, "endstruct")?);
         },
+        Some("plugin") => {
+            add_line(res, line);
+            res.push_str(&plugins);
+            add_line(res, skip_to(lines, "endplugin")?);
+        },
         Some("input") => {
             add_line(res, line);
             let indent = get_indentation(line);
@@ -237,6 +260,9 @@ fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &
                 add_line_indented(res, &indent, line);
             }
             add_line(res, skip_to(lines, "endinput")?);
+        },
+        Some("plugin_input") => {
+            add_line(res, line);
         },
         other => {
             return match other {
@@ -251,6 +277,7 @@ fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &
 pub fn transform(template: &str, template_path: &Path) -> Result<String, Box<dyn Error>> {
     let mut res = String::new();
     let mut structs = String::new();
+    let mut plugins = String::new();
     let mut input = String::new();
 
     let mut lines = template.lines();
@@ -260,9 +287,9 @@ pub fn transform(template: &str, template_path: &Path) -> Result<String, Box<dyn
 
         if line_tr.starts_with("/*!slide config") {
             add_line(&mut res, line);
-            handle_config(&mut lines, &mut res, &mut structs, &mut input)?;
+            handle_config(template_path, &mut lines, &mut res, &mut structs, &mut plugins, &mut input)?;
         } else if line_tr.starts_with("//!slide") {
-            handle_slide_line(line, &mut lines, template_path, &mut res, &mut structs, &mut input)?;
+            handle_slide_line(line, &mut lines, template_path, &mut res, &mut structs, &mut plugins, &mut input)?;
         } else {
             add_line(&mut res, line);
         }

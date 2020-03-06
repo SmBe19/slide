@@ -7,6 +7,9 @@
 //!slide struct
 //!slide endstruct
 
+//!slide plugin
+//!slide endplugin
+
 void solve() {
   //!slide input
   //!slide endinput
