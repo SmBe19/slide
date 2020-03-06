@@ -32,7 +32,7 @@ enum InpType {
 impl fmt::Display for InpType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            InpType::Integer => write!(f, "long long int"),
+            InpType::Integer => write!(f, "long"),
             InpType::Float => write!(f, "double"),
             InpType::String => write!(f, "string"),
             InpType::Pair(t1, t2) => write!(f, "pair<{}, {}>", t1, t2),
@@ -44,68 +44,42 @@ impl fmt::Display for InpType {
 }
 
 fn get_type(chars: &mut Chars, defined_structs: &HashMap<char, InpStruct>) -> Option<InpType> {
-    let char = match chars.next() {
-        Some(c) => c,
-        None => return None
-    };
-    Some(match char {
+    Some(match chars.next()? {
         'i' => InpType::Integer,
         'f' => InpType::Float,
         's' => InpType::String,
-        'p' => match get_type(chars, defined_structs) {
-            Some(t1) => match get_type(chars, defined_structs) {
-                Some(t2) => InpType::Pair(Box::from(t1), Box::from(t2)),
-                None => return None
-            },
-            None => return None
+        'p' => {
+            let t1 = get_type(chars, defined_structs)?;
+            let t2 = get_type(chars, defined_structs)?;
+            InpType::Pair(Box::from(t1), Box::from(t2))
         },
-        't' => match chars.next() {
-            Some(num) => {
-                let num = match num.to_digit(10) {
-                    Some(n) => n,
-                    None => return None
-                };
-                let types: Vec<InpType> = (0..num)
-                    .map(|_x| get_type(chars, defined_structs))
-                    .filter(|x| x.is_some())
-                    .map(|x| x.unwrap()).collect();
-                if num != types.len() as u32 {
-                    return None;
-                }
-                InpType::Tuple(types)
-            },
-            None => return None
-        }
-        'v' => match get_type(chars, defined_structs) {
-            Some(typ) => InpType::Vector(Box::from(typ)),
-            None => return None
-        }
-        other => match defined_structs.get(&other) {
-            Some(entry) => InpType::Struct((*entry).clone()),
-            None => {
-                return None
+        't' => {
+            let num = chars.next()?.to_digit(10)?;
+            let types: Vec<InpType> = (0..num)
+                .map(|_x| get_type(chars, defined_structs))
+                .filter(|x| x.is_some())
+                .map(|x| x.unwrap()).collect();
+            if num != types.len() as u32 {
+                return None;
             }
+            InpType::Tuple(types)
         }
+        'v' => InpType::Vector(Box::from(get_type(chars, defined_structs)?)),
+        other => InpType::Struct((*defined_structs.get(&other)?).clone()),
     })
 }
 
 fn handle_struct(line_tr: &str, structs: &mut String, defined_structs: &mut HashMap<char, InpStruct>) -> Result<(), ConfigError> {
     let mut chars = line_tr.chars();
     chars.next();
-    let short = match chars.next() {
-        Some(c) => c,
-        None => return Err(ConfigError),
-    };
+    let short = chars.next().ok_or(ConfigError)?;
     let mut types = Vec::new();
     while let Some(typ) = get_type(&mut chars, &defined_structs) {
         types.push(typ);
     }
     let mut parts = line_tr.split(':');
     parts.next();
-    let long = match parts.next() {
-        Some(p) => p.to_string(),
-        None => return Err(ConfigError),
-    };
+    let long = parts.next().ok_or(ConfigError)?.to_string();
     let elements: Vec<String> = parts.map(|s| s.to_string()).collect();
     add_line(structs, &format!("struct {} {{", long));
     if types.len() != elements.len() {
@@ -155,10 +129,7 @@ fn read_variable(typ: InpType, variable: &str, input: &mut String, indent: &Stri
 fn handle_variable(line_tr: &str, input: &mut String, defined_structs: &HashMap<char, InpStruct>) -> Result<(), ConfigError> {
     for inp_config in line_tr.split_ascii_whitespace() {
         let mut parts = inp_config.split(':');
-        let typ_part = match parts.next() {
-            Some(s) => s,
-            None => return Err(ConfigError),
-        };
+        let typ_part = parts.next().ok_or(ConfigError)?;
         let variable_opt = parts.next();
         let typ = match variable_opt {
             Some(_) => {
@@ -226,76 +197,90 @@ fn skip_to<'a>(iter: &'a mut Lines, end: &str) -> Result<&'a str, InvalidCommand
     Err(InvalidCommandError::new(&format!("Missing end for {}", end)))
 }
 
-pub fn generate(file: &Path, template_path: &Path) -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(file)?;
-    let mut res = String::new();
-    let mut structs = String::new();
-    let mut input = String::new();
+fn handle_config(lines: &mut Lines, res: &mut String, structs: &mut String, input: &mut String) -> Result<(), ConfigError> {
+    let mut config = String::new();
+    while let Some(line) = lines.next() {
+        let line_tr = line.trim();
+        add_line(res, line);
+        if line_tr == "*/" {
+            generate_input(&config, structs, input)?;
+            break
+        }
+        add_line(&mut config, line);
+    }
+    Ok(())
+}
+
+fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &mut String, structs: &mut String, input: &mut String) -> Result<(), Box<dyn Error>> {
 
     let error = |msg| {
         Err(InvalidCommandError::new(msg).into())
     };
 
-    let mut lines = contents.lines();
+    let mut parts = line.split_ascii_whitespace();
+    parts.next();
+    match parts.next() {
+        Some("include") => {
+            if let Some(include_path) = parts.next() {
+                let indent = get_indentation(line);
+                add_line_indented(res, &indent, &format!("// start include from {}", include_path));
+                let included = get_include_content(template_path, include_path)?;
+                for inc_line in included.lines() {
+                    add_line_indented(res, &indent, inc_line);
+                }
+                add_line_indented(res, &indent, &format!("// end include from {}", include_path));
+            } else {
+                return error("Missing include path");
+            }
+        },
+        Some("struct") => {
+            add_line(res, line);
+            res.push_str(&structs);
+            add_line(res, skip_to(lines, "endstruct")?);
+        },
+        Some("input") => {
+            add_line(res, line);
+            let indent = get_indentation(line);
+            for line in input.lines() {
+                add_line_indented(res, &indent, line);
+            }
+            add_line(res, skip_to(lines, "endinput")?);
+        },
+        other => {
+            return match other {
+                Some(value) => error(value),
+                None => error("No command given"),
+            };
+        }
+    }
+    Ok(())
+}
+
+pub fn transform(template: &str, template_path: &Path) -> Result<String, Box<dyn Error>> {
+    let mut res = String::new();
+    let mut structs = String::new();
+    let mut input = String::new();
+
+    let mut lines = template.lines();
 
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
 
         if line_tr.starts_with("/*!slide config") {
             add_line(&mut res, line);
-            let mut config = String::new();
-            while let Some(line) = lines.next() {
-                let line_tr = line.trim();
-                add_line(&mut res, line);
-                if line_tr == "*/" {
-                    generate_input(&config, &mut structs, &mut input)?;
-                    break
-                }
-                add_line(&mut config, line);
-            }
+            handle_config(&mut lines, &mut res, &mut structs, &mut input)?;
         } else if line_tr.starts_with("//!slide") {
-            let mut parts = line.split_ascii_whitespace();
-            parts.next();
-            match parts.next() {
-                Some("include") => {
-                    if let Some(include_path) = parts.next() {
-                        let indent = get_indentation(line);
-                        add_line_indented(&mut res, &indent, &format!("// start include from {}", include_path));
-                        let included = get_include_content(template_path, include_path)?;
-                        for inc_line in included.lines() {
-                            add_line_indented(&mut res, &indent, inc_line);
-                        }
-                        add_line_indented(&mut res, &indent, &format!("// end include from {}", include_path));
-                    } else {
-                        return error("Missing include path");
-                    }
-                },
-                Some("struct") => {
-                    add_line(&mut res, line);
-                    res.push_str(&structs);
-                    add_line(&mut res, skip_to(&mut lines, "endstruct")?);
-                },
-                Some("input") => {
-                    add_line(&mut res, line);
-                    let indent = get_indentation(line);
-                    for line in input.lines() {
-                        add_line_indented(&mut res, &indent, line);
-                    }
-                    add_line(&mut res, skip_to(&mut lines, "endinput")?);
-                },
-                other => {
-                    return match other {
-                        Some(value) => error(value),
-                        None => error("No command given"),
-                    };
-                }
-            }
+            handle_slide_line(line, &mut lines, template_path, &mut res, &mut structs, &mut input)?;
         } else {
             add_line(&mut res, line);
         }
     }
+    Ok(res)
+}
 
+pub fn generate(file: &Path, template_path: &Path) -> Result<(), Box<dyn Error>> {
+    let contents = fs::read_to_string(file)?;
+    let res = transform(&contents, template_path)?;
     fs::write(file, res)?;
-
     Ok(())
 }
