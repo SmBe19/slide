@@ -5,9 +5,11 @@
 //!slide include common
 
 //!slide struct
+//!slide endstruct
 
 void solve(lli tcn) {
   //!slide input
+  //!slide endinput
 
   cout << "Case #" << tcn << ": ";
 }

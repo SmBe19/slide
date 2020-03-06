@@ -5,9 +5,11 @@
 //!slide include common
 
 //!slide struct
+//!slide endstruct
 
 void solve() {
   //!slide input
+  //!slide endinput
 
 }
 
