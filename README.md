@@ -8,7 +8,7 @@ To define the input, specify the variables to read, separated by a space or newl
 
 You can define structs which you want to read. To define a struct, start a line with `}`, followed by the short form (a single letter) of the struct, then the types of the elements, and finally separated by `:` the names of the elements. You can then use the short form as any other type.
 
-Furthermore, there are a few plugins available. You can add them with `+plugin` where `plugin` is the name of the plugin (e.g. `graph` or `dfs`).
+Furthermore, there are a few plugins available. You can add them with `+plugin` where `plugin` is the name of the plugin (e.g. `graph` or `dfs`). Using `+flag` and `-flag` you can toggle settings in the plugin and you can set options with `option=value`. You can disable a plugin from reading input using `-input`.
 
 A possible configuration might be:
 
@@ -20,7 +20,7 @@ edges:ve:m
 t:pfi
 vv:vvvpii:n:m:n
 
-+graph
++graph +weight var=graph
 ```
 
 ## Install
