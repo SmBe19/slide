@@ -129,19 +129,10 @@ fn read_variable(typ: InpType, variable: &str, input: &mut String, indent: &Stri
 fn handle_variable(line_tr: &str, input: &mut String, defined_structs: &HashMap<char, InpStruct>) -> Result<(), ConfigError> {
     for inp_config in line_tr.split_ascii_whitespace() {
         let mut parts = inp_config.split(':');
-        let typ_part = parts.next().ok_or(ConfigError)?;
-        let variable_opt = parts.next();
-        let typ = match variable_opt {
-            Some(_) => {
-                let mut chars = typ_part.chars();
-                match get_type(&mut chars, &defined_structs) {
-                    Some(typ) => typ,
-                    None => return Err(ConfigError),
-                }
-            },
-            None => InpType::Integer,
-        };
-        let variable = variable_opt.unwrap_or(typ_part);
+        let variable = parts.next().ok_or(ConfigError)?;
+        let typ_part = parts.next().unwrap_or("i");
+        let mut chars = typ_part.chars();
+        let typ = get_type(&mut chars, &defined_structs).ok_or(ConfigError)?;
         read_variable(typ, variable, input, &String::from(""), &mut parts, &mut String::from(""));
     }
     Ok(())
@@ -225,6 +216,7 @@ fn handle_slide_line(line: &str, lines: &mut Lines, template_path: &Path, res: &
                 let indent = get_indentation(line);
                 add_line_indented(res, &indent, &format!("// start include from {}", include_path));
                 let included = get_include_content(template_path, include_path)?;
+                let included = transform(&included, template_path)?;
                 for inc_line in included.lines() {
                     add_line_indented(res, &indent, inc_line);
                 }
