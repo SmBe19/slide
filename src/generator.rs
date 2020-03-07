@@ -15,7 +15,7 @@ fn get_include_content(template_path: &Path, include: &str) -> Result<String, Bo
     transform(&fs::read_to_string(path)?, template_path)
 }
 
-fn handle_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, lines: &'a mut Lines) -> Result<(), Box<dyn Error>> {
+fn handle_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, option_keys: &mut Vec<&'a str>, lines: &'a mut Lines) -> Result<(), Box<dyn Error>> {
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
         if line_tr == "*/" {
@@ -29,12 +29,13 @@ fn handle_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, lines: &'a
             return Err(ConfigError.into());
         }
         options.insert(parts[0], parts[1]);
+        option_keys.push(parts[0]);
     }
     Ok(())
 }
 
-fn parse_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, parts: &'a mut SplitAsciiWhitespace) -> Result<(), Box<dyn Error>> {
-    for part in parts {
+fn parse_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, option_keys: &Vec<&'a str>, parts: &'a mut SplitAsciiWhitespace) -> Result<(), Box<dyn Error>> {
+    for (idx, part) in parts.enumerate() {
         let part_tr = part.trim();
         if part_tr.starts_with("-") {
             options.insert(&part_tr[1..], "false");
@@ -42,10 +43,14 @@ fn parse_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, parts: &'a 
             options.insert(&part_tr[1..], "true");
         } else {
             let parts: Vec<&str> = part.split("=").collect();
-            if parts.len() != 2 {
+            if parts.len() != 1 && parts.len() != 2 {
                 return Err(ConfigError.into());
             }
-            options.insert(parts[0], parts[1]);
+            if parts.len() == 1 {
+                options.insert(option_keys.get(idx).ok_or(ConfigError)?, parts[0]);
+            } else {
+                options.insert(parts[0], parts[1]);
+            }
         }
     }
     Ok(())
@@ -133,16 +138,18 @@ fn handle_plugin(line_tr: &str, template_path: &Path, plugins: &mut String, inpu
     let mut options = HashMap::new();
     options.insert("input", "true");
 
+    let mut option_keys = Vec::new();
+
     let mut lines = included.lines();
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
         if line_tr.starts_with("/*!slide plugin_config") {
-            handle_plugin_options(&mut options, &mut lines)?;
+            handle_plugin_options(&mut options, &mut option_keys, &mut lines)?;
             break;
         }
     }
 
-    parse_plugin_options(&mut options, &mut parts)?;
+    parse_plugin_options(&mut options, &option_keys, &mut parts)?;
 
     generate_plugin_code(&mut options, &included, input, plugins)?;
 
