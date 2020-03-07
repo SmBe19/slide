@@ -1,10 +1,14 @@
-use clap::{App, crate_description, crate_version, crate_authors, AppSettings, ArgMatches, Arg, SubCommand};
-use std::error::Error;
-use std::path::Path;
 use std::env;
+use std::error::Error;
 use std::fs;
+use std::path::Path;
 
+use clap::{App, AppSettings, Arg, ArgMatches, crate_authors, crate_description, crate_version, SubCommand};
+
+mod util;
 mod generator;
+mod ty;
+mod codegen;
 mod errors;
 
 pub fn run(args: ArgMatches) -> Result<(), Box<dyn Error>> {
