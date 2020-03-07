@@ -33,7 +33,6 @@ Add some more algorithms:
  - TopoSort
  - Dijkstra
  - MST
- - DP Template
  - Binary Search
  - Bridges/Articulation Points
  - SCC

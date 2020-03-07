@@ -58,3 +58,11 @@ pub fn get_type(chars: &mut Chars, defined_structs: &HashMap<char, InpStruct>) -
         other => InpType::Struct((*defined_structs.get(&other)?).clone()),
     })
 }
+
+pub fn get_all_types(chars: &mut Chars, defined_structs: &HashMap<char, InpStruct>) -> Vec<InpType> {
+    let mut types = Vec::new();
+    while let Some(typ) = get_type(chars, &defined_structs) {
+        types.push(typ);
+    }
+    types
+}

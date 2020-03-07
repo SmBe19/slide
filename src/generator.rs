@@ -6,8 +6,9 @@ use std::str::{Lines, SplitAsciiWhitespace};
 
 use crate::codegen::{read_variable, struct_definition};
 use crate::errors::{ConfigError, InvalidCommandError};
-use crate::ty::{get_type, InpStruct};
+use crate::ty::{get_type, InpStruct, get_all_types};
 use crate::util::{add_line, add_line_indented, get_indentation, skip_to, skip_to_count};
+use regex::Regex;
 
 fn get_include_content(template_path: &Path, include: &str) -> Result<String, Box<dyn Error>> {
     let path = template_path.join("include").join(format!("{}.cpp", include));
@@ -53,6 +54,8 @@ fn parse_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, parts: &'a 
 fn generate_plugin_code(options: &mut HashMap<&str, &str>, template: &str, input: &mut String, plugins: &mut String) -> Result<(), Box<dyn Error>> {
     let mut current_dest = plugins;
     let mut lines = template.lines();
+    let func_regex = Regex::new(r"£([a-z]+):([a-z]+)£")?;
+    let empty_hashmap = HashMap::new();
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
         if line_tr.starts_with("/*!slide plugin_config") {
@@ -90,7 +93,29 @@ fn generate_plugin_code(options: &mut HashMap<&str, &str>, template: &str, input
             }
         } else {
             let mut new_line = String::from(line);
+            for func in func_regex.captures_iter(line) {
+                let arg = func.get(2)
+                    .and_then(|arg| options.get(arg.as_str()))
+                    .ok_or(ConfigError)?;
+                let replacement = match func.get(1).ok_or(ConfigError)?.as_str() {
+                    "ty" => {
+                        let types = get_all_types(&mut arg.chars(), &empty_hashmap);
+                        types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")
+                    },
+                    "tyvar" => {
+                        let types = get_all_types(&mut arg.chars(), &empty_hashmap);
+                        types.iter().enumerate().map(|(i, ty)| format!("{} v{}", ty, i)).collect::<Vec<String>>().join(", ")
+                    },
+                    "var" => {
+                        let types = get_all_types(&mut arg.chars(), &empty_hashmap);
+                        types.iter().enumerate().map(|(i, _ty)| format!("v{}", i)).collect::<Vec<String>>().join(", ")
+                    },
+                    _ => return Err(ConfigError.into())
+                };
+                new_line = new_line.replace(func.get(0).ok_or(ConfigError)?.as_str(), &replacement);
+            }
             for (k, v) in options.iter() {
+
                 new_line = new_line.replace(&format!("${}$", k), v);
             }
             add_line(current_dest, &new_line);

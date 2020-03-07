@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::errors::ConfigError;
-use crate::ty::{get_type, InpStruct, InpType};
+use crate::ty::{InpStruct, InpType, get_all_types};
 use crate::util::{add_line, add_line_indented};
 
 pub fn read_variable(typ: InpType, variable: &str, input: &mut String, indent: &String, parts: &mut std::str::Split<char>, counter: &mut String) {
@@ -41,10 +41,7 @@ pub fn struct_definition(line_tr: &str, structs: &mut String, defined_structs: &
     let mut chars = line_tr.chars();
     chars.next();
     let short = chars.next().ok_or(ConfigError)?;
-    let mut types = Vec::new();
-    while let Some(typ) = get_type(&mut chars, &defined_structs) {
-        types.push(typ);
-    }
+    let types = get_all_types(&mut chars, defined_structs);
     let mut parts = line_tr.split(':');
     parts.next();
     let long = parts.next().ok_or(ConfigError)?.to_string();
