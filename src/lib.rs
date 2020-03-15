@@ -9,6 +9,7 @@ mod util;
 mod generator;
 mod ty;
 mod codegen;
+mod plugin;
 mod errors;
 
 pub fn run(args: ArgMatches) -> Result<(), Box<dyn Error>> {

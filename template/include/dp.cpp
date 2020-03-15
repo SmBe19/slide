@@ -15,10 +15,10 @@ class $class$ {
     map<tuple<£ty:inp£>, £ty:out£> memo;
     //!slide plugin_end_if
     //!slide plugin_if !map
-    vector<£ty:out£> memo;
+    £memovec:inp£ memo;
 
-    $class$(long maxval) {
-      memo.resize(maxval);
+    $class$(£tyvar:inp£) {
+      memo.resize(£memoresize:inp£);
     }
     //!slide plugin_end_if
 
@@ -33,10 +33,10 @@ class $class$ {
       return memo[state];
       //!slide plugin_end_if
       //!slide plugin_if !map
-      if (memo[£var:inp£] == $neut$) {
-        memo[£var:inp£] = solve_one(£var:inp£);
+      if (memo[£memoacc:inp£] == $neut$) {
+        memo[£memoacc:inp£] = solve_one(£var:inp£);
       }
-      return memo[£var:inp£];
+      return memo[£memoacc:inp£];
       //!slide plugin_end_if
     }
 };
