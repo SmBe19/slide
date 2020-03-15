@@ -37,3 +37,18 @@ impl error::Error for InvalidCommandError {
         None
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct CompilationFailed;
+
+impl fmt::Display for CompilationFailed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Compilation failed")
+    }
+}
+
+impl error::Error for CompilationFailed {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
+    }
+}

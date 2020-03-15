@@ -21,3 +21,9 @@ int main() {
   solve();
   return 0;
 }
+
+/*!slide testdata
+*/
+
+/*!slide stoml
+*/

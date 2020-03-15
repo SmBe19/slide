@@ -10,6 +10,7 @@ mod generator;
 mod ty;
 mod codegen;
 mod plugin;
+mod tester;
 mod errors;
 
 pub fn run(args: ArgMatches) -> Result<(), Box<dyn Error>> {
@@ -27,6 +28,8 @@ pub fn run(args: ArgMatches) -> Result<(), Box<dyn Error>> {
     match args.subcommand() {
         ("init", Some(sub_args)) => cmd_init(input_file, template_path, sub_args),
         ("gen", Some(_)) => cmd_gen(input_file, template_path),
+        ("compile", Some(_)) => cmd_compile(input_file),
+        ("check", Some(sub_args)) => cmd_check(input_file, sub_args),
         ("", None) => cmd_full_auto(input_file, template_path),
         _ => Ok(())
     }
@@ -42,11 +45,25 @@ pub fn parse_arguments() -> ArgMatches<'static> {
         .short("t")
         .long("template")
         .takes_value(true);
+    let print_failures = Arg::with_name("fail")
+        .help("Activate printing failed output")
+        .long("fail");
+    let check_pattern = Arg::with_name("pattern")
+        .help("Only check tests with the name starting with the pattern")
+        .long("only")
+        .short("o")
+        .takes_value(true);
     let subcommand_init = SubCommand::with_name("init")
         .about("Initialize a new template")
         .arg(template_arg);
     let subcommand_gen = SubCommand::with_name("gen")
         .about("Generate code based on the config in the file");
+    let subcommand_compile = SubCommand::with_name("compile")
+        .about("Compile the code");
+    let subcommand_check = SubCommand::with_name("check")
+        .about("Run the code on the provided samples")
+        .arg(print_failures)
+        .arg(check_pattern);
     let matches = App::new("slide")
         .about(crate_description!())
         .version(crate_version!())
@@ -54,6 +71,8 @@ pub fn parse_arguments() -> ArgMatches<'static> {
         .arg(input_arg)
         .subcommand(subcommand_init)
         .subcommand(subcommand_gen)
+        .subcommand(subcommand_compile)
+        .subcommand(subcommand_check)
         .get_matches();
     matches
 }
@@ -63,7 +82,9 @@ pub fn cmd_full_auto(path: &Path, template_path: &Path) -> Result<(), Box<dyn Er
         let template_file = template_path.join("template.cpp");
         fs::copy(template_file, path)?;
     }
-    generator::generate(path, template_path)
+    generator::generate(path, template_path)?;
+    tester::run_tester(path, None,false)?;
+    Ok(())
 }
 
 pub fn cmd_init(path: &Path, template_path: &Path, sub_args: &ArgMatches) -> Result<(), Box<dyn Error>> {
@@ -90,4 +111,13 @@ pub fn cmd_init(path: &Path, template_path: &Path, sub_args: &ArgMatches) -> Res
 
 pub fn cmd_gen(path: &Path, template_path: &Path) -> Result<(), Box<dyn Error>> {
     generator::generate(path, template_path)
+}
+
+pub fn cmd_compile(path: &Path) -> Result<(), Box<dyn Error>> {
+    tester::compile(path)?;
+    Ok(())
+}
+
+pub fn cmd_check(path: &Path, sub_args: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    tester::run_tester(path, sub_args.value_of("pattern"), sub_args.is_present("fail"))
 }
