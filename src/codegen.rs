@@ -5,6 +5,17 @@ use crate::ty::{InpStruct, InpType, get_all_types};
 use crate::util::{add_line, add_line_indented};
 
 pub fn read_variable(typ: InpType, variable: &str, input: &mut String, indent: &String, parts: &mut std::str::Split<char>, counter: &mut String) {
+    match typ {
+        InpType::Integer => add_line_indented(input, indent, &format!("IN({});", variable)),
+        InpType::Vector(ty) if *ty == InpType::Integer => {
+            let length = parts.next().unwrap_or("0");
+            add_line_indented(input, indent, &format!("INV({}, {});", variable, length));
+        },
+        _ => read_varialbe_fallback(typ, variable, input, indent, parts, counter),
+    }
+}
+
+pub fn read_varialbe_fallback(typ: InpType, variable: &str, input: &mut String, indent: &String, parts: &mut std::str::Split<char>, counter: &mut String) {
     add_line_indented(input, indent, &format!("{} {};", typ, variable));
     match typ {
         InpType::Integer | InpType::Float | InpType::String => {

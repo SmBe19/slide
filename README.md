@@ -29,6 +29,7 @@ Run `./install.sh`. This will copy the binary to `~/.local/bin/` and the templat
 ## TODO
 Add some more algorithms:
  - DP with vectors in multiple dimensions
+ - DP with static parameters
  - BFS
  - DFS
  - TopoSort

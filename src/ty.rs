@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::Chars;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InpStruct {
     pub long: String,
     pub elements: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum InpType {
     Integer,
     Float,
