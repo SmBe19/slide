@@ -1,7 +1,7 @@
 # slide
-Generate templates for competitive programming
+Generate templates for competitive programming and other utilities
 
-## How to use
+## Template generation
 Create a new file with `slide problem.cpp init`. Then, in the `!slide config` section, define the input format and generate the template with `slide problem.cpp gen`.
 
 To define the input, specify the variables to read, separated by a space or newlines. By default, the variables are integers. You can use suffixes to change this: use `:i` for integers, `:s` for strings, and `:f` for floating points. To define a pair, use `:pab` where `a` and `b` are the types of the pair. Use `:t3abc` to define a tuple with 3 elements. Use `:v` as a suffix for vectors and append the variable with the length at the end. You have to specify the type of the vector by appending it after the initial `v` (e.g. `words:vs:m` for a vector of strings of length `m`).
@@ -21,6 +21,41 @@ t:pfi
 vv:vvvpii:n:m:n
 
 +graph +weight var=graph
+```
+
+## Check testdata
+You can add testdata directly into the file in a `/*!slide testdata` or `/*!slide stoml` section. This testdata can then automatically be checked with `slide problem.cpp check`. To automatically generate, compile and check upon file save, use `slide problem.cpp watch`.
+
+The format for a testdata block is as follows:
+
+```
+some input
+---
+some output
+===
+other input
+---
+other output
+```
+
+For stoml, you can use:
+
+```
+[sample.01]
+input="""
+some input
+"""
+output="""
+some output
+"""
+
+[sample.02]
+input="""
+other input
+"""
+output="""
+other output
+"""
 ```
 
 ## Install
