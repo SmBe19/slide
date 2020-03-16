@@ -50,6 +50,8 @@ fn extract_test(idx: i32, lines: &mut Lines) -> Option<(Test, bool)> {
         if line_tr == "---" {
             found_sep = true;
             break;
+        } else if line_tr == "*/" {
+            return None;
         }
         input.push_str(line);
     }
