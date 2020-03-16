@@ -40,13 +40,15 @@ struct Test {
     output: String,
 }
 
-fn extract_test(idx: i32, lines: &mut Lines) -> (Test, bool) {
+fn extract_test(idx: i32, lines: &mut Lines) -> Option<(Test, bool)> {
     let mut input = String::new();
     let mut output = String::new();
     let mut is_last = false;
+    let mut found_sep = false;
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
         if line_tr == "---" {
+            found_sep = true;
             break;
         }
         input.push_str(line);
@@ -61,7 +63,10 @@ fn extract_test(idx: i32, lines: &mut Lines) -> (Test, bool) {
         }
         output.push_str(line);
     }
-    (Test { name: format!("test.{}", idx), input, output }, is_last)
+    if !found_sep || output.is_empty() {
+        return None;
+    }
+    Some((Test { name: format!("test.{}", idx), input, output }, is_last))
 }
 
 fn extract_stoml_test(lines: &mut Lines) -> Option<Test> {
@@ -105,10 +110,13 @@ fn extract_tests(contents: &str) -> Vec<Test> {
         let line_tr = line.trim();
         if line_tr.starts_with("/*!slide testdata") {
             loop {
-                let (test, is_last) = extract_test(idx, &mut lines);
-                res.push(test);
-                idx += 1;
-                if is_last {
+                if let Some((test, is_last)) = extract_test(idx, &mut lines) {
+                    res.push(test);
+                    idx += 1;
+                    if is_last {
+                        break;
+                    }
+                } else {
                     break;
                 }
             }
