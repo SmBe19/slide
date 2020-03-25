@@ -54,6 +54,7 @@ fn extract_test(idx: i32, lines: &mut Lines) -> Option<(Test, bool)> {
             return None;
         }
         input.push_str(line);
+        input.push('\n');
     }
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
@@ -64,6 +65,7 @@ fn extract_test(idx: i32, lines: &mut Lines) -> Option<(Test, bool)> {
             break;
         }
         output.push_str(line);
+        output.push('\n');
     }
     if !found_sep || output.is_empty() {
         return None;
@@ -92,6 +94,7 @@ fn extract_stoml_test(lines: &mut Lines) -> Option<Test> {
             break;
         }
         input.push_str(line);
+        input.push('\n');
     }
     lines.next();
     while let Some(line) = lines.next() {
@@ -100,6 +103,7 @@ fn extract_stoml_test(lines: &mut Lines) -> Option<Test> {
             break;
         }
         output.push_str(line);
+        output.push('\n');
     }
     Some(Test { name, input, output })
 }
