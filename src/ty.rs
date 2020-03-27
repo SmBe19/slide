@@ -22,7 +22,7 @@ pub enum InpType {
 impl fmt::Display for InpType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            InpType::Integer => write!(f, "long"),
+            InpType::Integer => write!(f, "long long int"),
             InpType::Float => write!(f, "double"),
             InpType::String => write!(f, "string"),
             InpType::Pair(t1, t2) => write!(f, "pair<{}, {}>", t1, t2),
