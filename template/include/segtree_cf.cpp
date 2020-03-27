@@ -1,22 +1,22 @@
 // https://codeforces.com/blog/entry/18051
 class $class$ {
   public:
-    long n;
-    vector<long> elements;
+    long long int n;
+    vector<long long int> elements;
 
-    $class$(long size) {
+    $class$(long long int size) {
       n = size;
       elements.resize(n);
     }
 
-    $class$(long size, vector<long>& orig_elements) {
+    $class$(long long int size, vector<long long int>& orig_elements) {
       n = size;
       elements.resize(n);
       elements.insert(elements.end(), orig_elements.begin(), orig_elements.end());
       build();
     }
 
-    long combine(long left, long right) {
+    long combine(long long int left, long long int right) {
       //!slide plugin_if op_func
       return $op$(left, right);
       //!slide plugin_end_if
@@ -31,7 +31,7 @@ class $class$ {
       }
     }
 
-    void modify(long pos, long value) {
+    void modify(long long int pos, long long int value) {
       pos += n;
       elements[pos] = value;
       for(; pos > 1; pos >>= 1) {
@@ -39,8 +39,8 @@ class $class$ {
       }
     }
 
-    long query(long left, long right) {
-      long res = $neut$;
+    long query(long long int left, long long int right) {
+      long long int res = $neut$;
       for (left += n, right += n; left < right; left >>= 1, right >>= 1) {
         if (left&1) {
           res = combine(elements[left++], res);

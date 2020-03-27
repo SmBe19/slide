@@ -6,22 +6,22 @@ size n
 
 class $class$ {
   public:
-    vector<long> parent;
-    vector<long> size;
+    vector<long long int> parent;
+    vector<long long int> size;
 
-    $class$ (long n) {
+    $class$ (long long int n) {
       parent.resize(n);
       iota(parent.begin(), parent.end(), 0);
       size.resize(n, 1);
     }
 
-    long f(long el) {
+    long long int f(long long int el) {
       if (parent[el] == el) return el;
       parent[el] = f(parent[el]);
       return parent[el];
     }
 
-    void u(long a, long b) {
+    void u(long long int a, long long int b) {
       a = f(a);
       b = f(b);
       if (a != b) {

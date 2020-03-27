@@ -10,7 +10,7 @@ list_ed ed
 
 class $class$ {
   public:
-    long nodes, edges;
+    long long int nodes, edges;
     //!slide plugin_if weight
     vector<vector<pair<long, long>> adj;
     //!slide plugin_end_if
@@ -22,9 +22,9 @@ class $class$ {
     void read() {
       cin >> nodes >> edges;
       adj.resize(nodes);
-      for(long i = 0; i < edges; i++) {
+      for(long long int i = 0; i < edges; i++) {
         //!slide plugin_if weight
-        long a, b, c;
+        long long int a, b, c;
         cin >> a >> b >> c;
         adj[a].emplace_back(b, c);
         //!slide plugin_if !dir
@@ -32,7 +32,7 @@ class $class$ {
         //!slide plugin_end_if
         //!slide plugin_end_if
         //!slide plugin_if !weight
-        long a, b;
+        long long int a, b;
         cin >> a >> b;
         adj[a].push_back(b);
         //!slide plugin_if !dir
@@ -45,7 +45,7 @@ class $class$ {
 
     //!slide plugin_if list
     //!slide plugin_if weight
-    void from_list(long n, vector<tuple<long, long, long>>& list) {
+    void from_list(long long int n, vector<tuple<long long int, long long int, long long int>>& list) {
       adj.resize(n);
       for (auto& edge : list) {
         adj[get<0>(edge)].emplace_back(get<1>(edge), get<2>(edge));
@@ -56,7 +56,7 @@ class $class$ {
     }
     //!slide plugin_end_if
     //!slide plugin_if !weight
-    void from_list(long n, vector<pair<long, long>>& list) {
+    void from_list(long long int n, vector<pair<long long int, long long int>>& list) {
       adj.resize(n);
       for (auto& edge : list) {
         adj[edge.first].push_back(edge.second);
