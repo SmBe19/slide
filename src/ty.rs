@@ -26,7 +26,15 @@ impl fmt::Display for InpType {
             InpType::Float => write!(f, "double"),
             InpType::String => write!(f, "string"),
             InpType::Pair(t1, t2) => write!(f, "pair<{}, {}>", t1, t2),
-            InpType::Tuple(types) => write!(f, "tuple<{}>", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
+            InpType::Tuple(types) => write!(
+                f,
+                "tuple<{}>",
+                types
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             InpType::Vector(typ) => write!(f, "vector<{}>", typ),
             InpType::Struct(typ) => write!(f, "{}", typ.long),
         }
@@ -42,13 +50,14 @@ pub fn get_type(chars: &mut Chars, defined_structs: &HashMap<char, InpStruct>) -
             let t1 = get_type(chars, defined_structs)?;
             let t2 = get_type(chars, defined_structs)?;
             InpType::Pair(Box::from(t1), Box::from(t2))
-        },
+        }
         't' => {
             let num = chars.next()?.to_digit(10)?;
             let types: Vec<InpType> = (0..num)
                 .map(|_x| get_type(chars, defined_structs))
                 .filter(|x| x.is_some())
-                .map(|x| x.unwrap()).collect();
+                .map(|x| x.unwrap())
+                .collect();
             if num != types.len() as u32 {
                 return None;
             }
@@ -59,7 +68,10 @@ pub fn get_type(chars: &mut Chars, defined_structs: &HashMap<char, InpStruct>) -
     })
 }
 
-pub fn get_all_types(chars: &mut Chars, defined_structs: &HashMap<char, InpStruct>) -> Vec<InpType> {
+pub fn get_all_types(
+    chars: &mut Chars,
+    defined_structs: &HashMap<char, InpStruct>,
+) -> Vec<InpType> {
     let mut types = Vec::new();
     while let Some(typ) = get_type(chars, &defined_structs) {
         types.push(typ);

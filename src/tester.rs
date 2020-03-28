@@ -1,9 +1,9 @@
-use std::{env, fs};
 use std::error::Error;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::Lines;
+use std::{env, fs};
 
 use wait_timeout::ChildExt;
 
@@ -12,7 +12,9 @@ use std::time::Duration;
 
 pub fn compile(path: &Path) -> Result<PathBuf, Box<dyn Error>> {
     let compiler = env::var("SLIDE_CC").unwrap_or(String::from("g++"));
-    let compiler_flags = env::var("SLIDE_CC_FLAGS").unwrap_or(String::from("-std=c++17 -Wall -Wextra -g3 -ggdb3 -D_GLIBCXX_DEBUG"));
+    let compiler_flags = env::var("SLIDE_CC_FLAGS").unwrap_or(String::from(
+        "-std=c++17 -Wall -Wextra -g3 -ggdb3 -D_GLIBCXX_DEBUG",
+    ));
     let compiler_add_flags = env::var("SLIDE_CC_ADD_FLAGS").unwrap_or(String::new());
 
     let compiler_flags = if compiler_add_flags.is_empty() {
@@ -31,7 +33,7 @@ pub fn compile(path: &Path) -> Result<PathBuf, Box<dyn Error>> {
         .status()?;
 
     if res.success() {
-       Ok(executable.into())
+        Ok(executable.into())
     } else {
         Err(CompilationFailed.into())
     }
@@ -74,7 +76,14 @@ fn extract_test(idx: i32, lines: &mut Lines) -> Option<(Test, bool)> {
     if !found_sep || output.is_empty() {
         return None;
     }
-    Some((Test { name: format!("test.{}", idx), input, output }, is_last))
+    Some((
+        Test {
+            name: format!("test.{}", idx),
+            input,
+            output,
+        },
+        is_last,
+    ))
 }
 
 fn extract_stoml_test(lines: &mut Lines) -> Option<Test> {
@@ -88,7 +97,7 @@ fn extract_stoml_test(lines: &mut Lines) -> Option<Test> {
     if name_line.trim() == "*/" || name_line.len() < 3 {
         return None;
     }
-    let name = String::from(&name_line[1..name_line.len()-1]);
+    let name = String::from(&name_line[1..name_line.len() - 1]);
     let mut input = String::new();
     let mut output = String::new();
     lines.next();
@@ -109,7 +118,11 @@ fn extract_stoml_test(lines: &mut Lines) -> Option<Test> {
         output.push_str(line);
         output.push('\n');
     }
-    Some(Test { name, input, output })
+    Some(Test {
+        name,
+        input,
+        output,
+    })
 }
 
 fn extract_tests(contents: &str) -> Vec<Test> {
@@ -146,7 +159,7 @@ fn compare_strings(str1: &str, str2: &str) -> bool {
     fn skip_empty<'a>(lines: &'a mut Lines) -> Option<&'a str> {
         while let Some(line) = lines.next() {
             if line.trim() != "" {
-                return Some(line)
+                return Some(line);
             }
         }
         None
@@ -165,7 +178,7 @@ fn compare_strings(str1: &str, str2: &str) -> bool {
                     return false;
                 }
             }
-            None => return true
+            None => return true,
         }
     }
 }
@@ -175,7 +188,8 @@ fn run_test(executable: &Path, test: &Test, print_failures: bool) -> bool {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .spawn() {
+        .spawn()
+    {
         Ok(child) => child,
         Err(_) => return false,
     };
@@ -184,19 +198,17 @@ fn run_test(executable: &Path, test: &Test, print_failures: bool) -> bool {
         None => return false,
     };
     match stdin.write_all(test.input.as_bytes()) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(_) => return false,
     }
 
     match child.wait_timeout(Duration::from_secs(1)) {
-        Ok(status) => {
-            match status {
-                Some(_) => {},
-                None => {
-                    let _ = child.kill();
-                    println!("Program took too long");
-                    return false;
-                }
+        Ok(status) => match status {
+            Some(_) => {}
+            None => {
+                let _ = child.kill();
+                println!("Program took too long");
+                return false;
             }
         },
         Err(err) => {
@@ -234,7 +246,11 @@ fn run_test(executable: &Path, test: &Test, print_failures: bool) -> bool {
     res
 }
 
-pub fn run_tester(path: &Path, pattern: Option<&str>, print_failures: bool) -> Result<(), Box<dyn Error>> {
+pub fn run_tester(
+    path: &Path,
+    pattern: Option<&str>,
+    print_failures: bool,
+) -> Result<(), Box<dyn Error>> {
     let executable = compile(path)?;
     let contents = fs::read_to_string(path)?;
     let tests = extract_tests(&contents);

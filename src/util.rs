@@ -1,5 +1,5 @@
-use std::str::Lines;
 use crate::errors::InvalidCommandError;
+use std::str::Lines;
 
 pub fn get_indentation(line: &str) -> String {
     let mut res = String::new();
@@ -7,7 +7,7 @@ pub fn get_indentation(line: &str) -> String {
         if c.is_ascii_whitespace() {
             res.push(c);
         } else {
-            break
+            break;
         }
     }
     res
@@ -22,8 +22,11 @@ pub fn add_line_indented(res: &mut String, indent: &str, line: &str) {
     add_line(res, &format!("{}{}", indent, line));
 }
 
-
-pub fn skip_to_count<'a>(iter: &'a mut Lines, start: Option<&str>, end: &str) -> Result<&'a str, InvalidCommandError> {
+pub fn skip_to_count<'a>(
+    iter: &'a mut Lines,
+    start: Option<&str>,
+    end: &str,
+) -> Result<&'a str, InvalidCommandError> {
     let mut counter = 1;
     while let Some(line) = iter.next() {
         let line_tr = line.trim();
@@ -34,7 +37,7 @@ pub fn skip_to_count<'a>(iter: &'a mut Lines, start: Option<&str>, end: &str) ->
                 if cmd == end {
                     counter -= 1;
                     if counter == 0 {
-                        return Ok(line)
+                        return Ok(line);
                     }
                 } else if Some(cmd) == start {
                     counter += 1;
@@ -42,7 +45,10 @@ pub fn skip_to_count<'a>(iter: &'a mut Lines, start: Option<&str>, end: &str) ->
             }
         }
     }
-    Err(InvalidCommandError::new(&format!("Missing end for {}", end)))
+    Err(InvalidCommandError::new(&format!(
+        "Missing end for {}",
+        end
+    )))
 }
 
 pub fn skip_to<'a>(iter: &'a mut Lines, end: &str) -> Result<&'a str, InvalidCommandError> {

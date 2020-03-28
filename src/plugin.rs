@@ -1,12 +1,16 @@
-use std::str::{Lines, SplitAsciiWhitespace};
+use crate::errors::ConfigError;
+use crate::ty::{get_all_types, InpType};
+use crate::util::{add_line, skip_to_count};
+use regex::Regex;
 use std::collections::HashMap;
 use std::error::Error;
-use crate::errors::ConfigError;
-use regex::Regex;
-use crate::util::{skip_to_count, add_line};
-use crate::ty::{get_all_types, InpType};
+use std::str::{Lines, SplitAsciiWhitespace};
 
-pub fn handle_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, option_keys: &mut Vec<&'a str>, lines: &'a mut Lines) -> Result<(), Box<dyn Error>> {
+pub fn handle_plugin_options<'a>(
+    options: &mut HashMap<&'a str, &'a str>,
+    option_keys: &mut Vec<&'a str>,
+    lines: &'a mut Lines,
+) -> Result<(), Box<dyn Error>> {
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
         if line_tr == "*/" {
@@ -25,7 +29,11 @@ pub fn handle_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, option
     Ok(())
 }
 
-pub fn parse_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, option_keys: &Vec<&'a str>, parts: &'a mut SplitAsciiWhitespace) -> Result<(), Box<dyn Error>> {
+pub fn parse_plugin_options<'a>(
+    options: &mut HashMap<&'a str, &'a str>,
+    option_keys: &Vec<&'a str>,
+    parts: &'a mut SplitAsciiWhitespace,
+) -> Result<(), Box<dyn Error>> {
     for (idx, part) in parts.enumerate() {
         let part_tr = part.trim();
         if part_tr.starts_with("-") {
@@ -47,7 +55,12 @@ pub fn parse_plugin_options<'a>(options: &mut HashMap<&'a str, &'a str>, option_
     Ok(())
 }
 
-pub fn generate_plugin_code(options: &mut HashMap<&str, &str>, template: &str, input: &mut String, plugins: &mut String) -> Result<(), Box<dyn Error>> {
+pub fn generate_plugin_code(
+    options: &mut HashMap<&str, &str>,
+    template: &str,
+    input: &mut String,
+    plugins: &mut String,
+) -> Result<(), Box<dyn Error>> {
     let mut current_dest = plugins;
     let mut lines = template.lines();
     let func_regex = Regex::new(r"£([a-z]+):([a-z]+)£")?;
@@ -71,7 +84,7 @@ pub fn generate_plugin_code(options: &mut HashMap<&str, &str>, template: &str, i
                     } else {
                         break;
                     }
-                },
+                }
                 Some("plugin_if") => {
                     let variable = parts.next().ok_or(ConfigError)?;
                     let should_skip = if variable.starts_with("!") {
@@ -82,7 +95,7 @@ pub fn generate_plugin_code(options: &mut HashMap<&str, &str>, template: &str, i
                     if should_skip {
                         skip_to_count(&mut lines, Some("plugin_if"), "plugin_end_if")?;
                     }
-                },
+                }
                 Some("plugin_end_if") => (),
                 Some(_) => return Err(ConfigError.into()),
                 None => return Err(ConfigError.into()),
@@ -90,40 +103,59 @@ pub fn generate_plugin_code(options: &mut HashMap<&str, &str>, template: &str, i
         } else {
             let mut new_line = String::from(line);
             for func in func_regex.captures_iter(line) {
-                let arg = func.get(2)
+                let arg = func
+                    .get(2)
                     .and_then(|arg| options.get(arg.as_str()))
                     .ok_or(ConfigError)?;
                 let replacement = match func.get(1).ok_or(ConfigError)?.as_str() {
                     "ty" => {
                         let types = get_all_types(&mut arg.chars(), &empty_hashmap);
-                        types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")
-                    },
+                        types
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    }
                     "tyvar" => {
                         let types = get_all_types(&mut arg.chars(), &empty_hashmap);
-                        types.iter().enumerate().map(|(i, ty)| format!("{} v{}", ty, i)).collect::<Vec<String>>().join(", ")
-                    },
+                        types
+                            .iter()
+                            .enumerate()
+                            .map(|(i, ty)| format!("{} v{}", ty, i))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    }
                     "var" => {
                         let types = get_all_types(&mut arg.chars(), &empty_hashmap);
-                        types.iter().enumerate().map(|(i, _ty)| format!("v{}", i)).collect::<Vec<String>>().join(", ")
-                    },
+                        types
+                            .iter()
+                            .enumerate()
+                            .map(|(i, _ty)| format!("v{}", i))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    }
                     "memovec" => {
                         let types = get_all_types(&mut arg.chars(), &empty_hashmap);
                         types_to_vectors(&types)?.to_string()
-                    },
+                    }
                     "memoresize" => {
                         let types = get_all_types(&mut arg.chars(), &empty_hashmap);
                         generate_memo_resize(0, &types)?
-                    },
+                    }
                     "memoacc" => {
                         let types = get_all_types(&mut arg.chars(), &empty_hashmap);
-                        types.iter().enumerate().map(|(i, _ty)| format!("v{}", i)).collect::<Vec<String>>().join("][")
+                        types
+                            .iter()
+                            .enumerate()
+                            .map(|(i, _ty)| format!("v{}", i))
+                            .collect::<Vec<String>>()
+                            .join("][")
                     }
-                    _ => return Err(ConfigError.into())
+                    _ => return Err(ConfigError.into()),
                 };
                 new_line = new_line.replace(func.get(0).ok_or(ConfigError)?.as_str(), &replacement);
             }
             for (k, v) in options.iter() {
-
                 new_line = new_line.replace(&format!("${}$", k), v);
             }
             add_line(current_dest, &new_line);
@@ -150,7 +182,7 @@ fn generate_memo_resize(idx: i32, types: &[InpType]) -> Result<String, Box<dyn E
         res.push_str(", ");
         res.push_str(&types_to_vectors(&types[1..])?.to_string());
         res.push('(');
-        res.push_str(&generate_memo_resize(idx+1, &types[1..])?);
+        res.push_str(&generate_memo_resize(idx + 1, &types[1..])?);
         res.push(')');
         Ok(res)
     } else {

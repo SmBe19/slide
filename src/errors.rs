@@ -1,4 +1,4 @@
-use std::{fmt, error};
+use std::{error, fmt};
 
 #[derive(Debug, Clone)]
 pub struct ConfigError;
@@ -22,7 +22,9 @@ pub struct InvalidCommandError {
 
 impl InvalidCommandError {
     pub fn new(msg: &str) -> InvalidCommandError {
-        InvalidCommandError{msg: String::from(msg)}
+        InvalidCommandError {
+            msg: String::from(msg),
+        }
     }
 }
 
