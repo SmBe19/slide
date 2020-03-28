@@ -1,10 +1,14 @@
-use std::path::{Path, PathBuf};
-use std::error::Error;
 use std::{env, fs};
-use std::process::{Command, Stdio};
-use crate::errors::CompilationFailed;
-use std::str::Lines;
+use std::error::Error;
 use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::str::Lines;
+
+use wait_timeout::ChildExt;
+
+use crate::errors::CompilationFailed;
+use std::time::Duration;
 
 pub fn compile(path: &Path) -> Result<PathBuf, Box<dyn Error>> {
     let compiler = env::var("SLIDE_CC").unwrap_or(String::from("g++"));
@@ -183,6 +187,24 @@ fn run_test(executable: &Path, test: &Test, print_failures: bool) -> bool {
         Ok(_) => {},
         Err(_) => return false,
     }
+
+    match child.wait_timeout(Duration::from_secs(1)) {
+        Ok(status) => {
+            match status {
+                Some(_) => {},
+                None => {
+                    let _ = child.kill();
+                    println!("Program took too long");
+                    return false;
+                }
+            }
+        },
+        Err(err) => {
+            println!("Everything went south... {}", err);
+            return false;
+        }
+    };
+
     let output = match child.wait_with_output() {
         Ok(output) => output,
         Err(_) => return false,

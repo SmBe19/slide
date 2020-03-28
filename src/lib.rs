@@ -2,10 +2,10 @@ use std::env;
 use std::error::Error;
 use std::fs;
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 use clap::{App, Arg, ArgMatches, crate_authors, crate_description, crate_version, SubCommand};
-use inotify::{Inotify, WatchMask, EventMask};
-use std::time::{Instant, Duration};
+use inotify::{EventMask, Inotify, WatchMask};
 
 mod util;
 mod generator;
@@ -154,6 +154,7 @@ pub fn cmd_watch(path: &Path, template_path: &Path, sub_args: &ArgMatches) -> Re
                     match cmd_check(path, sub_args) {
                         Ok(_) => (),
                         Err(err) => {
+                            println!("\n\n-------\n\n");
                             println!("Error while compiling or checking: {}", err);
                             continue;
                         }
