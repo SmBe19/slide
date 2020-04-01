@@ -6,6 +6,7 @@ neut 0
 op_func false
 var tree
 size n
+ty lli
 */
 
 //!slide plugin_if cf

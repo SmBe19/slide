@@ -2,17 +2,18 @@
 maxval 100002
 class Primes
 var primes
+ty lli
 */
 
 class $class$ {
   public:
-    vector<long long int> primes;
+    vector<$ty$> primes;
 
-    $class$ (long long int maxval) {
+    $class$ ($ty$ maxval) {
       primes.push_back(2);
-      for (long long int i = 3; i < maxval; i += 2) {
+      for ($ty$ i = 3; i < maxval; i += 2) {
         bool is_prime = true;
-        for (long long int other_prime : primes) {
+        for ($ty$ other_prime : primes) {
           if (i % other_prime == 0) {
             is_prime = false;
             break;

@@ -2,26 +2,27 @@
 class UnionFind
 var uf
 size n
+ty lli
 */
 
 class $class$ {
   public:
-    vector<long long int> parent;
-    vector<long long int> size;
+    vector<$ty$> parent;
+    vector<$ty$> size;
 
-    $class$ (long long int n) {
+    $class$ ($ty$ n) {
       parent.resize(n);
       iota(parent.begin(), parent.end(), 0);
       size.resize(n, 1);
     }
 
-    long long int f(long long int el) {
+    $ty$ f($ty$ el) {
       if (parent[el] == el) return el;
       parent[el] = f(parent[el]);
       return parent[el];
     }
 
-    void u(long long int a, long long int b) {
+    void u($ty$ a, $ty$ b) {
       a = f(a);
       b = f(b);
       if (a != b) {
