@@ -63,7 +63,7 @@ pub fn generate_plugin_code(
 ) -> Result<(), Box<dyn Error>> {
     let mut current_dest = plugins;
     let mut lines = template.lines();
-    let func_regex = Regex::new(r"£([a-z]+):([a-z]+)£")?;
+    let func_regex = Regex::new(r"£([a-z]+):([a-z]+)(?::([a-z]+))?£")?;
     let empty_hashmap = HashMap::new();
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
@@ -139,8 +139,12 @@ pub fn generate_plugin_code(
                         types_to_vectors(&types)?.to_string()
                     }
                     "memoresize" => {
+                        let neutval = func
+                            .get(3)
+                            .and_then(|arg| options.get(arg.as_str()))
+                            .unwrap_or(&"0");
                         let types = get_all_types(&mut arg.chars(), &empty_hashmap);
-                        generate_memo_resize(0, &types)?
+                        generate_memo_resize(0, &types, neutval)?
                     }
                     "memoacc" => {
                         let types = get_all_types(&mut arg.chars(), &empty_hashmap);
@@ -175,17 +179,17 @@ fn types_to_vectors(types: &[InpType]) -> Result<InpType, Box<dyn Error>> {
     }
 }
 
-fn generate_memo_resize(idx: i32, types: &[InpType]) -> Result<String, Box<dyn Error>> {
+fn generate_memo_resize(idx: i32, types: &[InpType], neut: &str) -> Result<String, Box<dyn Error>> {
     if types.len() > 1 {
         let mut res = String::new();
         res.push_str(&format!("v{}", idx));
         res.push_str(", ");
         res.push_str(&types_to_vectors(&types[1..])?.to_string());
         res.push('(');
-        res.push_str(&generate_memo_resize(idx + 1, &types[1..])?);
+        res.push_str(&generate_memo_resize(idx + 1, &types[1..], neut)?);
         res.push(')');
         Ok(res)
     } else {
-        Ok(format!("v{}", idx))
+        Ok(format!("v{}, {}", idx, neut))
     }
 }

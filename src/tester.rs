@@ -106,6 +106,11 @@ fn extract_stoml_test(lines: &mut Lines) -> Option<Test> {
         if line_tr == r#"""""# {
             break;
         }
+        if line_tr.ends_with(r#"""""#) {
+            input.push_str(&line_tr[0..line_tr.len()-3]);
+            input.push('\n');
+            break;
+        }
         input.push_str(line);
         input.push('\n');
     }
@@ -113,6 +118,11 @@ fn extract_stoml_test(lines: &mut Lines) -> Option<Test> {
     while let Some(line) = lines.next() {
         let line_tr = line.trim();
         if line_tr == r#"""""# {
+            break;
+        }
+        if line_tr.ends_with(r#"""""#) {
+            output.push_str(&line_tr[0..line_tr.len()-3]);
+            output.push('\n');
             break;
         }
         output.push_str(line);

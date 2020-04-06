@@ -18,7 +18,7 @@ class $class$ {
     £memovec:inp£ memo;
 
     $class$(£tyvar:inp£) {
-      memo.resize(£memoresize:inp£);
+      memo.resize(£memoresize:inp:neut£);
     }
     //!slide plugin_end_if
 
