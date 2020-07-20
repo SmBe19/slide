@@ -12,7 +12,7 @@ $ty$ $fme$($ty$ a, $ty$ x, $ty$ mod) {
       res = (res * a) % mod;
     }
     x >>= 1;
-    x = (x*x) % mod;
+    a = (a*a) % mod;
   }
   return res;
 }
