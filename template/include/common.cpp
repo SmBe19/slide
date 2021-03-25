@@ -32,11 +32,19 @@ void input(T &arg1, Ts&... args) {
 
 
 template <typename ST>
-void output(ST &strm) {}
+void output(ST &strm) {
+  (void)strm; // unused
+}
 template <typename ST, typename T, typename... Ts>
 void output(ST &strm, const T &arg1, const Ts&... args) {
   strm << arg1 << " ";
   output(strm, args...);
+}
+
+template<class T>
+ostream& operator<<(ostream& stream, const vector<T>& values) {
+    copy(begin(values), end(values), ostream_iterator<T>(stream, " "));
+    return stream;
 }
 
 template <typename T, typename S>
