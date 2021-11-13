@@ -19,6 +19,12 @@ class $class$ {
     vector<vector<$ty$>> adj;
     //!slide plugin_end_if
 
+    $class$ () : nodes {0}, edges {0} {}
+
+    $class$ ($ty$ nodeCount, $ty$ edgeCount) : nodes {nodeCount}, edges {edgeCount} {
+      adj.resize(nodeCount);
+    }
+
     //!slide plugin_if !list
     void read() {
       cin >> nodes >> edges;
